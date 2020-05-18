@@ -98,7 +98,7 @@ end
 
 
 -- timer main function
-local function housekeeper(_,)
+local function housekeeper()
     local tmp_key = gen_cache_key({tmp = true})
 
     -- get redis handler
