@@ -35,7 +35,7 @@ local red_hdl
 -- init the redis connnect handler
 local function init_redis_hdl()
     local red = redis:new()
-    red:set_timeouts(1000)
+    -- red:set_timeouts(1000)
     local ok, err = red:connect("127.0.0.1", 6379)
     if not ok then
         log(ERR, "redis connect failed", err)
