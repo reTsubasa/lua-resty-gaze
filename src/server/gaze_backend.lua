@@ -17,7 +17,7 @@ local ERR = ngx.ERR
 local DEBUG = ngx.DEBUG
 
 -- key prefix of tmp data in redis list
-local tmp_key_prefix = "_tmp"
+local tmp_key_prefix = "tmp"
 
 -- per_defined tokens that valid to send the request to this api
 local tokens = {"rCSA4rwmRszJrU5goRfhKvhUDz9n+aSQ"}
@@ -31,26 +31,23 @@ local _M = {_VERSION = "0.0.1"}
 
 local mt = {__index = _M}
 
+local red_hdl
 -- init the redis connnect handler
-local function redis_hdl()
-    local red_hdl
-    if not red_hdl then
-        red_hdl = redis:new()
-        red_hdl:set_timeouts(1000)
-        local ok, err = red_hdl:connect("127.0.0.1", 6379)
-        if not ok then
-            ngx.log(ngx.ERR, "redis connect failed", err)
-            return
-        end
+local function init_redis_hdl()
+    local red = redis:new()
+    red:set_timeouts(1000)
+    local ok, err = red:connect("127.0.0.1", 6379)
+    if not ok then
+        log(ERR, "redis connect failed", err)
     end
+    red_hdl = red
     return red_hdl
 end
 
-local function redis_kp(red)
-    local ok, err = red:set_keepalive(10000, 100)
+local function redis_kp()
+    local ok, err = red_hdl:set_keepalive(10000, 100)
     if not ok then
         log(ERR, "failed to set keepalive: ", err)
-        return
     end
 end
 
@@ -74,12 +71,12 @@ local function valid_token(token)
 end
 
 local function pop_data(key)
-    local red = redis_hdl()
+    local red = red_hdl or init_redis_hdl()
     if not red then
         return nil
     end
     local data = red:rpop(key)
-    redis_kp(red)
+    redis_kp()
     if data then
         return json.decode(data)
     end
@@ -102,23 +99,25 @@ end
 
 -- timer main function
 local function housekeeper()
-
     log(DEBUG, "START HOUSEKEEPER")
     local tmp_key = gen_cache_key({tmp = true})
-    log(DEBUG, "TEMP KEY: ",tmp_key)
+    log(DEBUG, "TEMP KEY: ", tmp_key)
     -- get redis handler
-    local red = redis_hdl()
-    if not red then
+    if not red_hdl then
+        init_redis_hdl()
+    end
+    if not red_hdl then
         log(ERR, "get redis connection handler failed")
+        return
     end
 
     -- fetch today's data
     local sum_data = {}
     local sum_key = gen_cache_key()
-    log(DEBUG, "SUM KEY: ",sum_key)
-    
-    local value, err = red:get(sum_key)
-    log(DEBUG, "SUM KEY: ",value,err)
+    log(DEBUG, "SUM KEY: ", sum_key)
+
+    local value, err = red_hdl:get(sum_key)
+    log(DEBUG, "SUM KEY: ", value, err)
     if err then
         log(ERR, "get key from redis error: ", err)
         return
@@ -132,8 +131,7 @@ local function housekeeper()
     local loop_cnt = 1
     local once_data = pop_data(tmp_key)
     if not once_data then
-        redis_kp(red)
-
+        redis_kp()
         log(DEBUG, "NO DATA SKIP")
         return
     end
@@ -147,8 +145,8 @@ local function housekeeper()
     -- set back new sum_data to the redis
     log(DEBUG, "SET BACK TO REDIS")
     log(DEBUG, "sum_key", sum_key, "sum_data", json.encode(sum_data))
-    local ok, err = red:set(sum_key, json.encode(sum_data))
-    redis_kp(red)
+    local ok, err = red_hdl:set(sum_key, json.encode(sum_data))
+    redis_kp()
     if not ok then
         log(ERR, "set back to redis failed: ", err)
     end
@@ -182,12 +180,15 @@ function _M.receiver()
 
     -- lpush into redis
     local key = gen_cache_key({tmp = true})
-    local red = redis_hdl()
+    local red = red_hdl or init_redis_hdl()
+    if not red then
+        return exit(502)
+    end
     local ok, err = red:lpush(key, data)
-    redis_kp(red)
+    redis_kp()
     if not ok then
         log(ERR, err)
-        return ngx.exit(502)
+        return exit(502)
     end
     return say("ok")
 end
@@ -204,12 +205,12 @@ function _M.get_quest()
         input_date = date()
     end
 
-    local red = redis_hdl()
+    local red = red_hdl or init_redis_hdl()
     if not red then
         return exit(502)
     end
     local res, err = red:get(input_date)
-    redis_kp(red)
+    redis_kp()
     if err then
         return say("获取后端数据错误", err)
     end
