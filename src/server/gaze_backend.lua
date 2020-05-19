@@ -14,7 +14,7 @@ local find = string.find
 local sub = string.sub
 local log = ngx.log
 local ERR = ngx.ERR
-local DEBUG  = ngx.DEBUG
+local DEBUG = ngx.DEBUG
 
 -- key prefix of tmp data in redis list
 local tmp_key_prefix = "_tmp"
@@ -23,7 +23,7 @@ local tmp_key_prefix = "_tmp"
 local tokens = {"rCSA4rwmRszJrU5goRfhKvhUDz9n+aSQ"}
 
 -- SETTINGS OF DATA HOUSEKEEPER
--- interval of data housekeeper timer 
+-- interval of data housekeeper timer
 local hk_interval = 5
 local hk_max_loop_num = 100
 
@@ -32,31 +32,29 @@ local _M = {_VERSION = "0.0.1"}
 local mt = {__index = _M}
 
 -- module layer cache for redis connect handler
-local red 
+local red_hdl
 -- init the redis connnect handler
 local function redis_hdl()
-    if not red then
-        red = redis:new()
-        red:set_timeouts(1000, 1000, 1000)
-        local ok, err = red:connect("127.0.0.1", 6379)
+    if not red_hdl then
+        red_hdl = redis:new()
+        red_hdl:set_timeouts(1000, 1000, 1000)
+        local ok, err = red_hdl:connect("127.0.0.1", 6379)
         if not ok then
-            ngx.log(ngx.ERR,"redis connect failed",err)
+            ngx.log(ngx.ERR, "redis connect failed", err)
             return
         end
     end
-    return red
+    return red_hdl
 end
-
 
 local function gen_cache_key(opts)
     opts = opts or {}
     if opts.tmp then
-        return fmt("%s_%s", date(),tmp_key_prefix)
+        return fmt("%s_%s", date(), tmp_key_prefix)
     end
 
     return date()
 end
-
 
 -- a simple header token valid function
 local function valid_token(token)
@@ -67,7 +65,6 @@ local function valid_token(token)
     end
     return nil
 end
-
 
 local function pop_data(key)
     local red = redis_hdl()
@@ -80,8 +77,7 @@ local function pop_data(key)
     end
 end
 
-
-local function summation(total,once)
+local function summation(total, once)
     local records = total.data or {}
     if not once or type(once) ~= "table" then
         return
@@ -96,8 +92,6 @@ local function summation(total,once)
     end
 end
 
-
-
 -- timer main function
 local function housekeeper()
     local tmp_key = gen_cache_key({tmp = true})
@@ -105,15 +99,15 @@ local function housekeeper()
     -- get redis handler
     local red = redis_hdl()
     if not red then
-        log(ERR,"get redis connection handler failed")
+        log(ERR, "get redis connection handler failed")
     end
 
     -- fetch today's data
     local sum_data = {}
-    local sum_key  = gen_cache_key()
-    local value,err = red:get(sum_key)
+    local sum_key = gen_cache_key()
+    local value, err = red:get(sum_key)
     if err then
-        log(ERR,"get key from redis error: ",err)
+        log(ERR, "get key from redis error: ", err)
         return
     end
 
@@ -122,21 +116,18 @@ local function housekeeper()
     -- loop the queue if get the data
     local loop_cnt = 1
     local once_data = pop_data(tmp_key)
-    while (loop_cnt <= hk_max_loop_num) and once_data  do
-        summation(sum_data,once_data)
+    while (loop_cnt <= hk_max_loop_num) and once_data do
+        summation(sum_data, once_data)
         once_data = pop_data(tmp_key)
         loop_cnt = loop_cnt + 1
     end
 
     -- set back new sum_data to the redis
-    local ok,err = red:set(sum_key,cjson.encode(sum_data))
+    local ok, err = red:set(sum_key, json.encode(sum_data))
     if not ok then
-        log(ERR,"set back to redis failed: ",err)
+        log(ERR, "set back to redis failed: ", err)
     end
-
-
 end
-
 
 -- a timer that comsume the tmp data ,and calu the sum value
 -- last set back to the db
@@ -167,13 +158,12 @@ function _M.receiver()
     -- lpush into redis
     local key = gen_cache_key({tmp = true})
     local red = redis_hdl()
-    local ok ,err = red:lpush(key,data)
+    local ok, err = red:lpush(key, data)
     if not ok then
         return ngx.exit(502)
     end
     return say("ok")
 end
-
 
 -- a API,return the data after the housekeeper worked
 function _M.get_quest()
@@ -182,7 +172,7 @@ function _M.get_quest()
         if len(input_date) ~= 8 then
             return say("日期格式不正确，仅支持?date='YYYYMMDD'类型")
         end
-        input_date = fmt("%s-%s-%s", sub(input_date,1,4),sub(input_date,5,6),sub(input_date,7,8))
+        input_date = fmt("%s-%s-%s", sub(input_date, 1, 4), sub(input_date, 5, 6), sub(input_date, 7, 8))
     else
         input_date = date()
     end
@@ -191,11 +181,10 @@ function _M.get_quest()
     if not red then
         return exit(502)
     end
-    local res,err = red:get(input_date)
+    local res, err = red:get(input_date)
     if err then
-        return say("获取后端数据错误",err)
+        return say("获取后端数据错误", err)
     end
     return res
-
 end
 return _M
