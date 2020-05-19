@@ -31,7 +31,6 @@ local _M = {_VERSION = "0.0.1"}
 
 local mt = {__index = _M}
 
-
 -- init the redis connnect handler
 local function redis_hdl()
     local red_hdl
@@ -110,7 +109,7 @@ local function housekeeper()
         log(ERR, "get key from redis error: ", err)
         return
     end
-    log(DEBUG,"GET DATA FROM REDIS")
+    log(DEBUG, "GET DATA FROM REDIS")
     if value then
         sum_data = json.decode(value)
     end
@@ -118,6 +117,11 @@ local function housekeeper()
     -- loop the queue if get the data
     local loop_cnt = 1
     local once_data = pop_data(tmp_key)
+    if not once_data then
+        log(DEBUG, "NO DATA SKIP")
+        return
+    end
+
     while (loop_cnt <= hk_max_loop_num) and once_data do
         summation(sum_data, once_data)
         once_data = pop_data(tmp_key)
@@ -125,8 +129,8 @@ local function housekeeper()
     end
 
     -- set back new sum_data to the redis
-    log(DEBUG,"SET BACK TO REDIS")
-    log(DEBUG,"sum_key",sum_key,"sum_data",json.encode(sum_data))
+    log(DEBUG, "SET BACK TO REDIS")
+    log(DEBUG, "sum_key", sum_key, "sum_data", json.encode(sum_data))
     local ok, err = red:set(sum_key, json.encode(sum_data))
     if not ok then
         log(ERR, "set back to redis failed: ", err)
@@ -164,7 +168,7 @@ function _M.receiver()
     local red = redis_hdl()
     local ok, err = red:lpush(key, data)
     if not ok then
-         log(ERR,err)
+        log(ERR, err)
         return ngx.exit(502)
     end
     return say("ok")
