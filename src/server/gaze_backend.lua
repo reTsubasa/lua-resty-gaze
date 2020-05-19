@@ -117,7 +117,7 @@ local function housekeeper()
     log(DEBUG, "SUM KEY: ", sum_key)
 
     local value, err = red_hdl:get(sum_key)
-    log(DEBUG, "SUM KEY: ", value, err)
+    log(DEBUG, "SUM VALUE: ", value, err)
     if err then
         log(ERR, "get key from redis error: ", err)
         return
@@ -195,7 +195,7 @@ end
 
 -- a API,return the data after the housekeeper worked
 function _M.get_quest()
-    local input_date = uri_args["date"]
+    local input_date = uri_args()["date"]
     if input_date then
         if len(input_date) ~= 8 then
             return say("日期格式不正确，仅支持?date='YYYYMMDD'类型")
