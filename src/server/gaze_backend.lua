@@ -110,7 +110,7 @@ local function housekeeper()
         log(ERR, "get key from redis error: ", err)
         return
     end
-
+    log(DEBUG,"GET DATA FROM REDIS")
     sum_data = json.decode(value)
 
     -- loop the queue if get the data
@@ -123,6 +123,7 @@ local function housekeeper()
     end
 
     -- set back new sum_data to the redis
+    log(DEBUG,"set back")
     local ok, err = red:set(sum_key, json.encode(sum_data))
     if not ok then
         log(ERR, "set back to redis failed: ", err)
@@ -160,6 +161,7 @@ function _M.receiver()
     local red = redis_hdl()
     local ok, err = red:lpush(key, data)
     if not ok then
+         log(ERR,err)
         return ngx.exit(502)
     end
     return say("ok")
