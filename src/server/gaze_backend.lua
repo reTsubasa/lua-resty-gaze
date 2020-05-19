@@ -31,10 +31,10 @@ local _M = {_VERSION = "0.0.1"}
 
 local mt = {__index = _M}
 
--- module layer cache for redis connect handler
-local red_hdl
+
 -- init the redis connnect handler
 local function redis_hdl()
+    local red_hdl
     if not red_hdl then
         red_hdl = redis:new()
         red_hdl:set_timeouts(1000, 1000, 1000)
