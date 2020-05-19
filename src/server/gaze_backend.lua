@@ -111,7 +111,9 @@ local function housekeeper()
         return
     end
     log(DEBUG,"GET DATA FROM REDIS")
-    sum_data = json.decode(value)
+    if value then
+        sum_data = json.decode(value)
+    end
 
     -- loop the queue if get the data
     local loop_cnt = 1
@@ -123,7 +125,7 @@ local function housekeeper()
     end
 
     -- set back new sum_data to the redis
-    log(DEBUG,"set back")
+    log(DEBUG,"SET BACK TO REDIS")
     local ok, err = red:set(sum_key, json.encode(sum_data))
     if not ok then
         log(ERR, "set back to redis failed: ", err)
