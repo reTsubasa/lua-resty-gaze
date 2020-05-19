@@ -126,6 +126,7 @@ local function housekeeper()
 
     -- set back new sum_data to the redis
     log(DEBUG,"SET BACK TO REDIS")
+    log(DEBUG,"sum_key",sum_key,"sum_data",json.encode(sum_data))
     local ok, err = red:set(sum_key, json.encode(sum_data))
     if not ok then
         log(ERR, "set back to redis failed: ", err)
