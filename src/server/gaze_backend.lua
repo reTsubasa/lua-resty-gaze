@@ -212,7 +212,7 @@ function _M.get_quest()
     local res, err = red:get(input_date)
     redis_kp()
     if err then
-        return say("获取后端数据错误", err)
+        return say("获取后端数据错误",input_date, err)
     end
     return res
 end
