@@ -50,7 +50,7 @@ end
 
 local function gen_cache_key(opts)
     if opts.tmp then
-        return fmt("%s_%s", data(),tmp_key_prefix)
+        return fmt("%s_%s", date(),tmp_key_prefix)
     end
 
     return date()
