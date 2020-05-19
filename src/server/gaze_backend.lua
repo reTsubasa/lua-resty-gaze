@@ -36,7 +36,7 @@ local function redis_hdl()
     local red_hdl
     if not red_hdl then
         red_hdl = redis:new()
-        red_hdl:set_timeouts(1000, 1000, 1000)
+        red_hdl:set_timeouts(1000)
         local ok, err = red_hdl:connect("127.0.0.1", 6379)
         if not ok then
             ngx.log(ngx.ERR, "redis connect failed", err)
