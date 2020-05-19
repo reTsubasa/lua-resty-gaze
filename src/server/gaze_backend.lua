@@ -102,8 +102,10 @@ end
 
 -- timer main function
 local function housekeeper()
-    local tmp_key = gen_cache_key({tmp = true})
 
+    log(DEBUG, "START HOUSEKEEPER")
+    local tmp_key = gen_cache_key({tmp = true})
+    log(DEBUG, "TEMP KEY: ",tmp_key)
     -- get redis handler
     local red = redis_hdl()
     if not red then
@@ -113,8 +115,10 @@ local function housekeeper()
     -- fetch today's data
     local sum_data = {}
     local sum_key = gen_cache_key()
+    log(DEBUG, "SUM KEY: ",sum_key)
+    
     local value, err = red:get(sum_key)
-
+    log(DEBUG, "SUM KEY: ",value,err)
     if err then
         log(ERR, "get key from redis error: ", err)
         return
