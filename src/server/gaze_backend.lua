@@ -49,6 +49,7 @@ end
 
 
 local function gen_cache_key(opts)
+    opts = opts or {}
     if opts.tmp then
         return fmt("%s_%s", date(),tmp_key_prefix)
     end
