@@ -46,6 +46,14 @@ local function redis_hdl()
     return red_hdl
 end
 
+local function redis_kp(red)
+    local ok, err = red:set_keepalive(10000, 100)
+    if not ok then
+        log(ERR, "failed to set keepalive: ", err)
+        return
+    end
+end
+
 local function gen_cache_key(opts)
     opts = opts or {}
     if opts.tmp then
@@ -71,6 +79,7 @@ local function pop_data(key)
         return nil
     end
     local data = red:rpop(key)
+    redis_kp(red)
     if data then
         return json.decode(data)
     end
@@ -105,6 +114,7 @@ local function housekeeper()
     local sum_data = {}
     local sum_key = gen_cache_key()
     local value, err = red:get(sum_key)
+
     if err then
         log(ERR, "get key from redis error: ", err)
         return
@@ -118,6 +128,8 @@ local function housekeeper()
     local loop_cnt = 1
     local once_data = pop_data(tmp_key)
     if not once_data then
+        redis_kp(red)
+
         log(DEBUG, "NO DATA SKIP")
         return
     end
@@ -132,6 +144,7 @@ local function housekeeper()
     log(DEBUG, "SET BACK TO REDIS")
     log(DEBUG, "sum_key", sum_key, "sum_data", json.encode(sum_data))
     local ok, err = red:set(sum_key, json.encode(sum_data))
+    redis_kp(red)
     if not ok then
         log(ERR, "set back to redis failed: ", err)
     end
@@ -167,6 +180,7 @@ function _M.receiver()
     local key = gen_cache_key({tmp = true})
     local red = redis_hdl()
     local ok, err = red:lpush(key, data)
+    redis_kp(red)
     if not ok then
         log(ERR, err)
         return ngx.exit(502)
@@ -191,6 +205,7 @@ function _M.get_quest()
         return exit(502)
     end
     local res, err = red:get(input_date)
+    redis_kp(red)
     if err then
         return say("获取后端数据错误", err)
     end
